@@ -122,6 +122,7 @@
         <input type="number" id="monto" placeholder="Cantidad a enviar" /><br>
         <button id="confirmar-enviar">Confirmar envío</button>
         <button class="cancelar" id="cancelar-enviar">Cancelar</button>
+        <p id="error" style="color: red;"></p> <!-- Mensaje de error -->
     </section>
 
     <!-- Transacciones recientes -->
@@ -148,10 +149,16 @@
         const cancelarEnviar = document.getElementById('cancelar-enviar');
         const montoInput = document.getElementById('monto');
         const destinatarioInput = document.getElementById('destinatario');
+        const errorElement = document.getElementById('error');
+
+        // Recuperar saldo desde localStorage si existe
+        let saldo = parseFloat(localStorage.getItem('saldo') || '500');
+        saldoElement.textContent = `r/${saldo}`;
 
         // Muestra el formulario para enviar dinero
         enviarBtn.addEventListener('click', () => {
             formularioEnviar.style.display = 'block';
+            errorElement.textContent = ''; // Limpiar cualquier mensaje de error
         });
 
         // Cancelar el envío
@@ -161,28 +168,42 @@
 
         // Confirmar el envío de dinero
         confirmarEnviar.addEventListener('click', () => {
-            const destinatario = destinatarioInput.value;
+            const destinatario = destinatarioInput.value.trim();
             const monto = parseFloat(montoInput.value);
-            const saldoActual = parseFloat(saldoElement.textContent.replace('r/', ''));
 
-            if (destinatario && monto && monto <= saldoActual) {
-                // Actualizamos el saldo
-                saldoElement.textContent = `r/${(saldoActual - monto).toFixed(2)}`;
-                
-                // Agregamos la transacción al historial
-                const nuevaTransaccion = document.createElement('li');
-                nuevaTransaccion.textContent = `r/${monto} a ${destinatario} - Hace 1 minuto`;
-                historialElement.appendChild(nuevaTransaccion);
-
-                // Ocultamos el formulario de envío
-                formularioEnviar.style.display = 'none';
-
-                // Limpiamos los campos
-                montoInput.value = '';
-                destinatarioInput.value = '';
-            } else {
-                alert('Monto insuficiente o campos incompletos.');
+            if (!destinatario) {
+                errorElement.textContent = 'Por favor ingresa un destinatario válido.';
+                return;
             }
+
+            if (isNaN(monto) || monto <= 0) {
+                errorElement.textContent = 'Por favor ingresa una cantidad válida para enviar.';
+                return;
+            }
+
+            if (monto > saldo) {
+                errorElement.textContent = 'Saldo insuficiente para realizar la transacción.';
+                return;
+            }
+
+            // Actualizamos el saldo
+            saldo -= monto;
+            saldoElement.textContent = `r/${saldo.toFixed(2)}`;
+
+            // Guardamos el nuevo saldo en localStorage
+            localStorage.setItem('saldo', saldo.toFixed(2));
+
+            // Agregamos la transacción al historial
+            const nuevaTransaccion = document.createElement('li');
+            nuevaTransaccion.textContent = `r/${monto.toFixed(2)} a ${destinatario} - Hace 1 minuto`;
+            historialElement.appendChild(nuevaTransaccion);
+
+            // Ocultamos el formulario de envío
+            formularioEnviar.style.display = 'none';
+
+            // Limpiamos los campos
+            montoInput.value = '';
+            destinatarioInput.value = '';
         });
     </script>
 </body>
