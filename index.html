@@ -71,6 +71,27 @@
             padding: 10px;
             border-radius: 5px;
         }
+
+        /* Estilo para los formularios */
+        #formulario-enviar {
+            display: none;
+            margin-top: 20px;
+        }
+
+        #formulario-enviar input {
+            padding: 10px;
+            margin: 5px;
+            width: 200px;
+            border-radius: 5px;
+        }
+
+        #formulario-enviar button {
+            background-color: #28a745;
+        }
+
+        #formulario-enviar button.cancelar {
+            background-color: #dc3545;
+        }
     </style>
 </head>
 <body>
@@ -80,7 +101,7 @@
         <img src="roquitanus-icon.png" alt="Icono de Roquitanus" />
         <nav>
             <button>Inicio</button>
-            <button>Enviar</button>
+            <button id="enviar-btn">Enviar</button>
             <button>Historial</button>
             <button>Ajustes</button>
         </nav>
@@ -88,18 +109,25 @@
 
     <!-- Cuerpo -->
     <section id="saldo">
-        <h2>Saldo disponible: <span>r/500</span></h2>
+        <h2>Saldo disponible: <span id="saldo-actual">r/500</span></h2>
         <div class="progress-bar"></div> <!-- Barra de progreso -->
     </section>
 
-    <section id="accion">
-        <button id="enviar-dinero">Enviar Dinero</button>
+    <!-- Formulario para enviar dinero -->
+    <section id="formulario-enviar">
+        <h3>Enviar dinero</h3>
+        <label for="destinatario">Destinatario:</label>
+        <input type="text" id="destinatario" placeholder="Usuario destino" /><br>
+        <label for="monto">Monto:</label>
+        <input type="number" id="monto" placeholder="Cantidad a enviar" /><br>
+        <button id="confirmar-enviar">Confirmar envío</button>
+        <button class="cancelar" id="cancelar-enviar">Cancelar</button>
     </section>
 
     <!-- Transacciones recientes -->
     <section id="recientes">
         <h3>Últimas transacciones</h3>
-        <ul>
+        <ul id="historial-transacciones">
             <li>r/50 a usuario123 - Hace 10 minutos</li>
         </ul>
     </section>
@@ -112,7 +140,50 @@
 
     <!-- Scripts -->
     <script>
-        // Aquí puedes agregar interactividad si lo deseas, como mostrar modales, hacer transacciones, etc.
+        const saldoElement = document.getElementById('saldo-actual');
+        const historialElement = document.getElementById('historial-transacciones');
+        const formularioEnviar = document.getElementById('formulario-enviar');
+        const enviarBtn = document.getElementById('enviar-btn');
+        const confirmarEnviar = document.getElementById('confirmar-enviar');
+        const cancelarEnviar = document.getElementById('cancelar-enviar');
+        const montoInput = document.getElementById('monto');
+        const destinatarioInput = document.getElementById('destinatario');
+
+        // Muestra el formulario para enviar dinero
+        enviarBtn.addEventListener('click', () => {
+            formularioEnviar.style.display = 'block';
+        });
+
+        // Cancelar el envío
+        cancelarEnviar.addEventListener('click', () => {
+            formularioEnviar.style.display = 'none';
+        });
+
+        // Confirmar el envío de dinero
+        confirmarEnviar.addEventListener('click', () => {
+            const destinatario = destinatarioInput.value;
+            const monto = parseFloat(montoInput.value);
+            const saldoActual = parseFloat(saldoElement.textContent.replace('r/', ''));
+
+            if (destinatario && monto && monto <= saldoActual) {
+                // Actualizamos el saldo
+                saldoElement.textContent = `r/${(saldoActual - monto).toFixed(2)}`;
+                
+                // Agregamos la transacción al historial
+                const nuevaTransaccion = document.createElement('li');
+                nuevaTransaccion.textContent = `r/${monto} a ${destinatario} - Hace 1 minuto`;
+                historialElement.appendChild(nuevaTransaccion);
+
+                // Ocultamos el formulario de envío
+                formularioEnviar.style.display = 'none';
+
+                // Limpiamos los campos
+                montoInput.value = '';
+                destinatarioInput.value = '';
+            } else {
+                alert('Monto insuficiente o campos incompletos.');
+            }
+        });
     </script>
 </body>
 </html>
