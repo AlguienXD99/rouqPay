@@ -1,0 +1,93 @@
+<!DOCTYPE html>
+<html lang="es">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>RoquiPay Dashboard</title>
+    <script type="module">
+        // Importa Firebase
+        import { initializeApp } from "https://www.gstatic.com/firebasejs/10.8.0/firebase-app.js";
+        import { getAuth, signOut, onAuthStateChanged } from "https://www.gstatic.com/firebasejs/10.8.0/firebase-auth.js";
+        import { getFirestore, doc, getDoc, updateDoc } from "https://www.gstatic.com/firebasejs/10.8.0/firebase-firestore.js";
+
+        // Configuración de Firebase
+const firebaseConfig = {
+  apiKey: "AIzaSyDVS2vEMyTAPni8_nqIZQbE-qIGCO2KgM8",
+  authDomain: "rqpay-d3303.firebaseapp.com",
+  projectId: "rqpay-d3303",
+  storageBucket: "rqpay-d3303.firebasestorage.app",
+  messagingSenderId: "379022327794",
+  appId: "1:379022327794:web:7bbd717dff3b0ed215756b"
+};
+        // Inicializa Firebase
+        const app = initializeApp(firebaseConfig);
+        const auth = getAuth(app);
+        const db = getFirestore(app);
+
+        const balanceElement = document.getElementById("balance");
+        const userEmailElement = document.getElementById("userEmail");
+        const transferForm = document.getElementById("transferForm");
+
+        onAuthStateChanged(auth, async (user) => {
+            if (user) {
+                userEmailElement.textContent = user.email;
+                const userRef = doc(db, "users", user.uid);
+                const userSnap = await getDoc(userRef);
+                if (userSnap.exists()) {
+                    balanceElement.textContent = userSnap.data().balance;
+                }
+            } else {
+                window.location.href = "index.html";
+            }
+        });
+
+        transferForm.addEventListener("submit", async (e) => {
+            e.preventDefault();
+            const recipientEmail = e.target.recipient.value;
+            const amount = parseFloat(e.target.amount.value);
+            const user = auth.currentUser;
+
+            if (!user || isNaN(amount) || amount <= 0) return;
+
+            const userRef = doc(db, "users", user.uid);
+            const userSnap = await getDoc(userRef);
+            if (!userSnap.exists() || userSnap.data().balance < amount) {
+                alert("Saldo insuficiente");
+                return;
+            }
+
+            const recipientQuery = doc(db, "users", recipientEmail);
+            const recipientSnap = await getDoc(recipientQuery);
+            if (!recipientSnap.exists()) {
+                alert("El destinatario no existe");
+                return;
+            }
+
+            await updateDoc(userRef, { balance: userSnap.data().balance - amount });
+            await updateDoc(recipientQuery, { balance: recipientSnap.data().balance + amount });
+
+            balanceElement.textContent = userSnap.data().balance - amount;
+            alert("Transferencia exitosa");
+        });
+
+        document.getElementById("logout").addEventListener("click", async () => {
+            await signOut(auth);
+            window.location.href = "index.html";
+        });
+    </script>
+</head>
+<body>
+    <h1>Bienvenido a tu Dashboard de RoquiPay</h1>
+    <p>Usuario: <span id="userEmail"></span></p>
+    <p>Saldo: <span id="balance">0</span> roquitanus</p>
+    
+    <h2>Transferir Roquitanus</h2>
+    <form id="transferForm">
+        <input type="email" name="recipient" placeholder="Correo del destinatario" required>
+        <input type="number" name="amount" placeholder="Cantidad" required>
+        <button type="submit">Transferir</button>
+    </form>
+
+    <button id="logout">Cerrar sesión</button>
+</body>
+</html>
