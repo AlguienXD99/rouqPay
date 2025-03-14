@@ -4,207 +4,67 @@
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
     <title>RoquiPay</title>
-    <style>
-        body {
-            font-family: Arial, sans-serif;
-            background-color: white;
-            color: #333;
-            text-align: center;
-        }
+    <script type="module">
+        // Importa Firebase
+        import { initializeApp } from "https://www.gstatic.com/firebasejs/10.8.0/firebase-app.js";
+        import { getAuth, signInWithPopup, GoogleAuthProvider, signInWithEmailAndPassword, createUserWithEmailAndPassword } from "https://www.gstatic.com/firebasejs/10.8.0/firebase-auth.js";
+        import { getFirestore, doc, getDoc, setDoc } from "https://www.gstatic.com/firebasejs/10.8.0/firebase-firestore.js";
 
-        header {
-            background-color: #e1e1e1;
-            padding: 20px;
-        }
+        // Configuración de Firebase
+const firebaseConfig = {
+  apiKey: "AIzaSyDVS2vEMyTAPni8_nqIZQbE-qIGCO2KgM8",
+  authDomain: "rqpay-d3303.firebaseapp.com",
+  projectId: "rqpay-d3303",
+  storageBucket: "rqpay-d3303.firebasestorage.app",
+  messagingSenderId: "379022327794",
+  appId: "1:379022327794:web:7bbd717dff3b0ed215756b"
+};
+        // Inicializa Firebase
+        const app = initializeApp(firebaseConfig);
+        const auth = getAuth(app);
+        const db = getFirestore(app);
 
-        h1 {
-            font-size: 2em;
-            color: #005f6b;
-        }
+        document.getElementById("googleLogin").addEventListener("click", async () => {
+            const provider = new GoogleAuthProvider();
+            try {
+                const result = await signInWithPopup(auth, provider);
+                const user = result.user;
+                await checkUserInDB(user.uid, user.email);
+            } catch (error) {
+                console.error("Error al iniciar sesión con Google", error);
+            }
+        });
 
-        button {
-            background-color: #005f6b;
-            color: white;
-            padding: 10px 20px;
-            border: none;
-            cursor: pointer;
-            margin: 10px;
-        }
+        document.getElementById("emailLogin").addEventListener("submit", async (e) => {
+            e.preventDefault();
+            const email = e.target.email.value;
+            const password = e.target.password.value;
+            try {
+                const userCredential = await signInWithEmailAndPassword(auth, email, password);
+                await checkUserInDB(userCredential.user.uid, email);
+            } catch (error) {
+                console.error("Error al iniciar sesión", error);
+            }
+        });
 
-        button:hover {
-            background-color: #007f8a;
-        }
+        async function checkUserInDB(uid, email) {
+            const userRef = doc(db, "users", uid);
+            const userSnap = await getDoc(userRef);
 
-        #saldo {
-            margin-top: 20px;
+            if (!userSnap.exists()) {
+                await setDoc(userRef, { email: email, balance: 1000 }); // 1000 roquitanus iniciales
+            }
+            window.location.href = "dashboard.html";
         }
-
-        .progress-bar {
-            width: 100%;
-            height: 20px;
-            background-color: #ddd;
-            margin-top: 10px;
-        }
-
-        #accion {
-            margin-top: 30px;
-        }
-
-        #codigo-qr img {
-            width: 150px;
-            height: 150px;
-            margin-top: 10px;
-        }
-
-        section {
-            margin-bottom: 30px;
-        }
-
-        #recientes ul {
-            list-style: none;
-            padding: 0;
-        }
-
-        #recientes li {
-            background-color: #f0f0f0;
-            margin: 5px;
-            padding: 10px;
-            border-radius: 5px;
-        }
-
-        /* Estilo para los formularios */
-        #formulario-enviar {
-            display: none;
-            margin-top: 20px;
-        }
-
-        #formulario-enviar input {
-            padding: 10px;
-            margin: 5px;
-            width: 200px;
-            border-radius: 5px;
-        }
-
-        #formulario-enviar button {
-            background-color: #28a745;
-        }
-
-        #formulario-enviar button.cancelar {
-            background-color: #dc3545;
-        }
-    </style>
+    </script>
 </head>
 <body>
-    <!-- Encabezado -->
-    <header>
-        <h1>RoquiPay</h1>
-        <img src="roquitanus-icon.png" alt="Icono de Roquitanus" />
-        <nav>
-            <button>Inicio</button>
-            <button id="enviar-btn">Enviar</button>
-            <button>Historial</button>
-            <button>Ajustes</button>
-        </nav>
-    </header>
-
-    <!-- Cuerpo -->
-    <section id="saldo">
-        <h2>Saldo disponible: <span id="saldo-actual">r/500</span></h2>
-        <div class="progress-bar"></div> <!-- Barra de progreso -->
-    </section>
-
-    <!-- Formulario para enviar dinero -->
-    <section id="formulario-enviar">
-        <h3>Enviar dinero</h3>
-        <label for="destinatario">Destinatario:</label>
-        <input type="text" id="destinatario" placeholder="Usuario destino" /><br>
-        <label for="monto">Monto:</label>
-        <input type="number" id="monto" placeholder="Cantidad a enviar" /><br>
-        <button id="confirmar-enviar">Confirmar envío</button>
-        <button class="cancelar" id="cancelar-enviar">Cancelar</button>
-        <p id="error" style="color: red;"></p> <!-- Mensaje de error -->
-    </section>
-
-    <!-- Transacciones recientes -->
-    <section id="recientes">
-        <h3>Últimas transacciones</h3>
-        <ul id="historial-transacciones">
-            <li>r/50 a usuario123 - Hace 10 minutos</li>
-        </ul>
-    </section>
-
-    <!-- Código QR para recibir dinero -->
-    <section id="codigo-qr">
-        <h3>Recibe dinero escaneando este código QR</h3>
-        <img src="qr-code.png" alt="Código QR">
-    </section>
-
-    <!-- Scripts -->
-    <script>
-        const saldoElement = document.getElementById('saldo-actual');
-        const historialElement = document.getElementById('historial-transacciones');
-        const formularioEnviar = document.getElementById('formulario-enviar');
-        const enviarBtn = document.getElementById('enviar-btn');
-        const confirmarEnviar = document.getElementById('confirmar-enviar');
-        const cancelarEnviar = document.getElementById('cancelar-enviar');
-        const montoInput = document.getElementById('monto');
-        const destinatarioInput = document.getElementById('destinatario');
-        const errorElement = document.getElementById('error');
-
-        // Recuperar saldo desde localStorage si existe
-        let saldo = parseFloat(localStorage.getItem('saldo') || '500');
-        saldoElement.textContent = `r/${saldo}`;
-
-        // Muestra el formulario para enviar dinero
-        enviarBtn.addEventListener('click', () => {
-            formularioEnviar.style.display = 'block';
-            errorElement.textContent = ''; // Limpiar cualquier mensaje de error
-        });
-
-        // Cancelar el envío
-        cancelarEnviar.addEventListener('click', () => {
-            formularioEnviar.style.display = 'none';
-        });
-
-        // Confirmar el envío de dinero
-        confirmarEnviar.addEventListener('click', () => {
-            const destinatario = destinatarioInput.value.trim();
-            const monto = parseFloat(montoInput.value);
-
-            if (!destinatario) {
-                errorElement.textContent = 'Por favor ingresa un destinatario válido.';
-                return;
-            }
-
-            if (isNaN(monto) || monto <= 0) {
-                errorElement.textContent = 'Por favor ingresa una cantidad válida para enviar.';
-                return;
-            }
-
-            if (monto > saldo) {
-                errorElement.textContent = 'Saldo insuficiente para realizar la transacción.';
-                return;
-            }
-
-            // Actualizamos el saldo
-            saldo -= monto;
-            saldoElement.textContent = `r/${saldo.toFixed(2)}`;
-
-            // Guardamos el nuevo saldo en localStorage
-            localStorage.setItem('saldo', saldo.toFixed(2));
-
-            // Agregamos la transacción al historial
-            const nuevaTransaccion = document.createElement('li');
-            nuevaTransaccion.textContent = `r/${monto.toFixed(2)} a ${destinatario} - Hace 1 minuto`;
-            historialElement.appendChild(nuevaTransaccion);
-
-            // Ocultamos el formulario de envío
-            formularioEnviar.style.display = 'none';
-
-            // Limpiamos los campos
-            montoInput.value = '';
-            destinatarioInput.value = '';
-        });
-    </script>
+    <h1>Bienvenido a RoquiPay</h1>
+    <button id="googleLogin">Iniciar sesión con Google</button>
+    <form id="emailLogin">
+        <input type="email" name="email" placeholder="Correo" required>
+        <input type="password" name="password" placeholder="Contraseña" required>
+        <button type="submit">Iniciar sesión</button>
+    </form>
 </body>
 </html>
